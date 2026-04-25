@@ -210,3 +210,135 @@ function xibufz_menu_fallback( $class = 'nav-list' ) {
 function xibufz_empty_state() {
 	echo '<p class="empty-state">' . esc_html__( '暂无内容，请稍后查看。', 'xibufz' ) . '</p>';
 }
+
+/**
+ * Resolve a category ID by name for default module fallbacks.
+ *
+ * @param string $name Category name.
+ * @return int
+ */
+function xibufz_category_id_by_name( $name ) {
+	$term = get_category_by_slug( sanitize_title( $name ) );
+
+	if ( ! $term ) {
+		$term = get_term_by( 'name', $name, 'category' );
+	}
+
+	return $term && ! is_wp_error( $term ) ? (int) $term->term_id : 0;
+}
+
+/**
+ * Sort module rows by order.
+ *
+ * @param array $a First module.
+ * @param array $b Second module.
+ * @return int
+ */
+function xibufz_sort_home_modules( $a, $b ) {
+	$a_order = isset( $a['order'] ) ? (int) $a['order'] : 0;
+	$b_order = isset( $b['order'] ) ? (int) $b['order'] : 0;
+
+	if ( $a_order === $b_order ) {
+		return 0;
+	}
+
+	return $a_order < $b_order ? -1 : 1;
+}
+
+/**
+ * Sanitize home module rows.
+ *
+ * @param array $raw_modules Raw module rows.
+ * @return array
+ */
+function xibufz_sanitize_home_modules( $raw_modules ) {
+	$modules = array();
+
+	foreach ( $raw_modules as $raw_module ) {
+		if ( ! is_array( $raw_module ) ) {
+			continue;
+		}
+
+		$title       = isset( $raw_module['title'] ) ? sanitize_text_field( $raw_module['title'] ) : '';
+		$category_id = isset( $raw_module['category_id'] ) ? absint( $raw_module['category_id'] ) : 0;
+
+		if ( '' === $title && 0 === $category_id ) {
+			continue;
+		}
+
+		if ( '' === $title && $category_id ) {
+			$category = get_category( $category_id );
+			$title    = $category && ! is_wp_error( $category ) ? $category->name : '';
+		}
+
+		$style = isset( $raw_module['style'] ) ? sanitize_key( $raw_module['style'] ) : 'default';
+		if ( ! in_array( $style, array( 'red', 'default', 'dark' ), true ) ) {
+			$style = 'default';
+		}
+
+		$count = isset( $raw_module['count'] ) ? absint( $raw_module['count'] ) : 5;
+		if ( 1 > $count ) {
+			$count = 5;
+		}
+
+		$modules[] = array(
+			'show'        => ! empty( $raw_module['show'] ) ? 1 : 0,
+			'title'       => $title,
+			'category_id' => $category_id,
+			'count'       => $count,
+			'style'       => $style,
+			'order'       => isset( $raw_module['order'] ) ? intval( $raw_module['order'] ) : 0,
+		);
+	}
+
+	usort( $modules, 'xibufz_sort_home_modules' );
+
+	return $modules;
+}
+
+/**
+ * Default home module configuration.
+ *
+ * @return array
+ */
+function xibufz_default_home_modules() {
+	$modules = array(
+		array( 'title' => esc_html__( '综合信息', 'xibufz' ), 'style' => 'red', 'category_name' => '综合信息' ),
+		array( 'title' => esc_html__( '法制热点', 'xibufz' ), 'style' => 'default', 'category_name' => '法制热点' ),
+		array( 'title' => esc_html__( '法律法规', 'xibufz' ), 'style' => 'default', 'category_name' => '法律法规' ),
+		array( 'title' => esc_html__( '专题专栏', 'xibufz' ), 'style' => 'default', 'category_name' => '专题专栏' ),
+		array( 'title' => esc_html__( '法治理论', 'xibufz' ), 'style' => 'dark', 'category_name' => '法治理论' ),
+		array( 'title' => esc_html__( '普法宣传', 'xibufz' ), 'style' => 'dark', 'category_name' => '普法宣传' ),
+	);
+
+	foreach ( $modules as $index => $module ) {
+		$modules[ $index ]['show']        = 1;
+		$modules[ $index ]['category_id'] = xibufz_category_id_by_name( $module['category_name'] );
+		$modules[ $index ]['count']       = 5;
+		$modules[ $index ]['order']       = ( $index + 1 ) * 10;
+		unset( $modules[ $index ]['category_name'] );
+	}
+
+	return $modules;
+}
+
+/**
+ * Get configured home modules.
+ *
+ * @return array
+ */
+function xibufz_get_home_modules() {
+	$modules = get_theme_mod( 'xibufz_home_modules', array() );
+
+	if ( ! is_array( $modules ) || empty( $modules ) ) {
+		return xibufz_default_home_modules();
+	}
+
+	$modules = xibufz_sanitize_home_modules( $modules );
+
+	if ( empty( $modules ) ) {
+		return xibufz_default_home_modules();
+	}
+
+	return $modules;
+}

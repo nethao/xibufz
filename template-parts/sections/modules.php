@@ -5,14 +5,7 @@
  * @package xibufz
  */
 
-$modules = array(
-	array( 'title' => esc_html__( '综合信息', 'xibufz' ), 'class' => 'red' ),
-	array( 'title' => esc_html__( '法制热点', 'xibufz' ), 'class' => '' ),
-	array( 'title' => esc_html__( '法律法规', 'xibufz' ), 'class' => '' ),
-	array( 'title' => esc_html__( '专题专栏', 'xibufz' ), 'class' => '' ),
-	array( 'title' => esc_html__( '法治理论', 'xibufz' ), 'class' => 'dark' ),
-	array( 'title' => esc_html__( '普法宣传', 'xibufz' ), 'class' => 'dark' ),
-);
+$modules = xibufz_get_home_modules();
 ?>
 
 <section class="section">
@@ -23,10 +16,34 @@ $modules = array(
 	<div class="module-grid">
 		<?php foreach ( $modules as $module ) : ?>
 			<?php
-			$module_query = xibufz_query_by_category( $module['title'], 5 );
-			$term_url     = xibufz_category_url( $module['title'] );
+			if ( empty( $module['show'] ) ) {
+				continue;
+			}
+
+			$category_id = isset( $module['category_id'] ) ? absint( $module['category_id'] ) : 0;
+			$post_count  = isset( $module['count'] ) ? absint( $module['count'] ) : 5;
+			$style       = isset( $module['style'] ) ? sanitize_key( $module['style'] ) : 'default';
+			$card_class  = 'default' === $style ? '' : $style;
+			$query_args  = array(
+				'posts_per_page'      => max( 1, $post_count ),
+				'post_status'         => 'publish',
+				'ignore_sticky_posts' => true,
+				'no_found_rows'       => true,
+			);
+
+			if ( $category_id ) {
+				$query_args['cat'] = $category_id;
+			}
+
+			$term_url = home_url( '/' );
+			if ( $category_id ) {
+				$category_url = get_category_link( $category_id );
+				$term_url     = ! is_wp_error( $category_url ) ? $category_url : home_url( '/' );
+			}
+
+			$module_query = new WP_Query( $query_args );
 			?>
-			<article class="card module-card <?php echo esc_attr( $module['class'] ); ?>">
+			<article class="card module-card <?php echo esc_attr( $card_class ); ?>">
 				<div class="module-head">
 					<h3><?php echo esc_html( $module['title'] ); ?></h3>
 					<a href="<?php echo esc_url( $term_url ); ?>"><?php echo esc_html__( '更多 >', 'xibufz' ); ?></a>
