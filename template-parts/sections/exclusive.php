@@ -44,6 +44,8 @@ $lower_panels  = function_exists( 'xibufz_get_home_sidebar_panels' ) ? xibufz_ge
 			<?php xibufz_render_home_sidebar_panel( $panel ); ?>
 		<?php endforeach; ?>
 
-		<?php get_sidebar(); ?>
+		<?php if ( is_active_sidebar( 'home-sidebar' ) && ! $lower_panels ) : ?>
+			<?php get_sidebar(); ?>
+		<?php endif; ?>
 	</div>
 </section>
