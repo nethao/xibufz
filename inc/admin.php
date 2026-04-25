@@ -50,6 +50,15 @@ function xibufz_admin_menu() {
 
 	add_submenu_page(
 		XIBUFZ_ADMIN_SLUG,
+		esc_html__( '首页头条区', 'xibufz' ),
+		esc_html__( '首页头条区', 'xibufz' ),
+		'edit_theme_options',
+		'xibufz-home-headline',
+		'xibufz_admin_headline_page'
+	);
+
+	add_submenu_page(
+		XIBUFZ_ADMIN_SLUG,
 		esc_html__( '首页栏目管理', 'xibufz' ),
 		esc_html__( '首页栏目管理', 'xibufz' ),
 		'edit_theme_options',
@@ -152,6 +161,10 @@ function xibufz_admin_maybe_save() {
 			xibufz_admin_save_banner();
 			xibufz_admin_redirect( 'xibufz-home-banner' );
 			break;
+		case 'save_headline':
+			xibufz_admin_save_headline();
+			xibufz_admin_redirect( 'xibufz-home-headline' );
+			break;
 		case 'save_home_modules':
 			xibufz_admin_save_home_modules();
 			xibufz_admin_redirect( 'xibufz-home-modules' );
@@ -187,6 +200,10 @@ function xibufz_admin_maybe_save() {
 		case 'reset_home_modules':
 			set_theme_mod( 'xibufz_home_modules', xibufz_default_home_modules() );
 			xibufz_admin_redirect( 'xibufz-home-modules' );
+			break;
+		case 'reset_headline':
+			set_theme_mod( 'xibufz_home_headline', xibufz_default_home_headline() );
+			xibufz_admin_redirect( 'xibufz-home-headline' );
 			break;
 		case 'reset_sidebar_panels':
 			set_theme_mod( 'xibufz_home_sidebar_panels', xibufz_default_home_sidebar_panels() );
@@ -233,6 +250,14 @@ function xibufz_admin_save_banner() {
 	set_theme_mod( 'xibufz_banner_title', isset( $_POST['xibufz_banner_title'] ) ? sanitize_text_field( wp_unslash( $_POST['xibufz_banner_title'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_subtitle', isset( $_POST['xibufz_banner_subtitle'] ) ? sanitize_textarea_field( wp_unslash( $_POST['xibufz_banner_subtitle'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_url', isset( $_POST['xibufz_banner_url'] ) ? esc_url_raw( wp_unslash( $_POST['xibufz_banner_url'] ) ) : '' );
+}
+
+/**
+ * Save headline settings.
+ */
+function xibufz_admin_save_headline() {
+	$raw_config = isset( $_POST['xibufz_home_headline'] ) && is_array( $_POST['xibufz_home_headline'] ) ? wp_unslash( $_POST['xibufz_home_headline'] ) : array();
+	set_theme_mod( 'xibufz_home_headline', xibufz_sanitize_home_headline( $raw_config ) );
 }
 
 /**
@@ -487,6 +512,10 @@ function xibufz_admin_write_default_theme_mods() {
 		set_theme_mod( 'xibufz_home_modules', xibufz_default_home_modules() );
 	}
 
+	if ( ! is_array( get_theme_mod( 'xibufz_home_headline', array() ) ) || empty( get_theme_mod( 'xibufz_home_headline', array() ) ) ) {
+		set_theme_mod( 'xibufz_home_headline', xibufz_default_home_headline() );
+	}
+
 	if ( ! is_array( get_theme_mod( 'xibufz_home_sidebar_panels', array() ) ) || empty( get_theme_mod( 'xibufz_home_sidebar_panels', array() ) ) ) {
 		set_theme_mod( 'xibufz_home_sidebar_panels', xibufz_default_home_sidebar_panels() );
 	}
@@ -590,6 +619,145 @@ function xibufz_admin_banner_page() {
 				<?php xibufz_admin_text_row( 'xibufz_banner_url', __( '跳转链接', 'xibufz' ), get_theme_mod( 'xibufz_banner_url', home_url( '/' ) ), 'url' ); ?>
 			</table>
 			<?php submit_button( esc_html__( '保存 Banner', 'xibufz' ) ); ?>
+			</form>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Render home headline page.
+ */
+function xibufz_admin_headline_page() {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		return;
+	}
+
+	$config            = function_exists( 'xibufz_get_home_headline_config' ) ? xibufz_get_home_headline_config() : array();
+	$sources           = array(
+		'sticky'   => esc_html__( '置顶文章优先', 'xibufz' ),
+		'latest'   => esc_html__( '最新文章', 'xibufz' ),
+		'category' => esc_html__( '指定分类最新文章', 'xibufz' ),
+		'manual'   => esc_html__( '手动指定文章 ID', 'xibufz' ),
+	);
+	$fallbacks         = array(
+		'latest' => esc_html__( '无内容时回退最新文章', 'xibufz' ),
+		'empty'  => esc_html__( '无内容时显示默认文案', 'xibufz' ),
+	);
+	$secondary_sources = array(
+		'latest'   => esc_html__( '最新文章', 'xibufz' ),
+		'category' => esc_html__( '指定分类文章', 'xibufz' ),
+	);
+	?>
+	<div class="wrap xibufz-admin-wrap">
+		<h1><?php echo esc_html__( '首页头条区', 'xibufz' ); ?></h1>
+		<?php xibufz_admin_notice(); ?>
+		<div class="xibufz-admin-card">
+			<p><?php echo esc_html__( '管理首页左侧“今日头条”主标题和下方次级头条的抓取规则。默认规则为优先读取置顶文章，未设置置顶时回退最新文章。', 'xibufz' ); ?></p>
+			<?php xibufz_admin_form_open( 'save_headline' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php echo esc_html__( '是否显示', 'xibufz' ); ?></th>
+					<td><label><input type="checkbox" name="xibufz_home_headline[show]" value="1" <?php checked( ! empty( $config['show'] ) ); ?>> <?php echo esc_html__( '显示今日头条主卡片', 'xibufz' ); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_badge"><?php echo esc_html__( '头条标签', 'xibufz' ); ?></label></th>
+					<td><input class="regular-text" id="xibufz_home_headline_badge" type="text" name="xibufz_home_headline[badge]" value="<?php echo esc_attr( $config['badge'] ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_source"><?php echo esc_html__( '主头条抓取规则', 'xibufz' ); ?></label></th>
+					<td>
+						<select id="xibufz_home_headline_source" name="xibufz_home_headline[source]">
+							<?php foreach ( $sources as $value => $label ) : ?>
+								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $config['source'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<p class="description"><?php echo esc_html__( '选择“手动指定文章 ID”时，将优先使用下方填写的文章 ID。', 'xibufz' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_category_id"><?php echo esc_html__( '主头条绑定分类', 'xibufz' ); ?></label></th>
+					<td>
+						<?php
+						wp_dropdown_categories(
+							array(
+								'id'                => 'xibufz_home_headline_category_id',
+								'name'              => 'xibufz_home_headline[category_id]',
+								'selected'          => absint( $config['category_id'] ),
+								'show_option_none'  => esc_html__( '不绑定分类', 'xibufz' ),
+								'option_none_value' => 0,
+								'hide_empty'        => false,
+								'taxonomy'          => 'category',
+							)
+						);
+						?>
+						<p class="description"><?php echo esc_html__( '当主头条抓取规则为“指定分类最新文章”时生效。', 'xibufz' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_post_id"><?php echo esc_html__( '手动文章 ID', 'xibufz' ); ?></label></th>
+					<td><input class="small-text" id="xibufz_home_headline_post_id" type="number" min="0" name="xibufz_home_headline[post_id]" value="<?php echo esc_attr( $config['post_id'] ); ?>"></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_fallback"><?php echo esc_html__( '主头条回退规则', 'xibufz' ); ?></label></th>
+					<td>
+						<select id="xibufz_home_headline_fallback" name="xibufz_home_headline[fallback]">
+							<?php foreach ( $fallbacks as $value => $label ) : ?>
+								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $config['fallback'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php echo esc_html__( '摘要显示', 'xibufz' ); ?></th>
+					<td>
+						<label><input type="checkbox" name="xibufz_home_headline[show_excerpt]" value="1" <?php checked( ! empty( $config['show_excerpt'] ) ); ?>> <?php echo esc_html__( '显示主头条摘要', 'xibufz' ); ?></label>
+						<label for="xibufz_home_headline_excerpt_length" style="margin-left: 18px;"><?php echo esc_html__( '摘要字数', 'xibufz' ); ?></label>
+						<input class="small-text" id="xibufz_home_headline_excerpt_length" type="number" min="10" max="120" name="xibufz_home_headline[excerpt_length]" value="<?php echo esc_attr( $config['excerpt_length'] ); ?>">
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php echo esc_html__( '次级头条', 'xibufz' ); ?></th>
+					<td><label><input type="checkbox" name="xibufz_home_headline[secondary_show]" value="1" <?php checked( ! empty( $config['secondary_show'] ) ); ?>> <?php echo esc_html__( '显示下方 3 条左右的次级头条列表', 'xibufz' ); ?></label></td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_secondary_source"><?php echo esc_html__( '次级头条抓取规则', 'xibufz' ); ?></label></th>
+					<td>
+						<select id="xibufz_home_headline_secondary_source" name="xibufz_home_headline[secondary_source]">
+							<?php foreach ( $secondary_sources as $value => $label ) : ?>
+								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $config['secondary_source'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_secondary_category_id"><?php echo esc_html__( '次级头条绑定分类', 'xibufz' ); ?></label></th>
+					<td>
+						<?php
+						wp_dropdown_categories(
+							array(
+								'id'                => 'xibufz_home_headline_secondary_category_id',
+								'name'              => 'xibufz_home_headline[secondary_category_id]',
+								'selected'          => absint( $config['secondary_category_id'] ),
+								'show_option_none'  => esc_html__( '不绑定分类', 'xibufz' ),
+								'option_none_value' => 0,
+								'hide_empty'        => false,
+								'taxonomy'          => 'category',
+							)
+						);
+						?>
+						<p class="description"><?php echo esc_html__( '当次级头条抓取规则为“指定分类文章”时生效。', 'xibufz' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_home_headline_secondary_count"><?php echo esc_html__( '次级头条数量', 'xibufz' ); ?></label></th>
+					<td><input class="small-text" id="xibufz_home_headline_secondary_count" type="number" min="1" max="8" name="xibufz_home_headline[secondary_count]" value="<?php echo esc_attr( $config['secondary_count'] ); ?>"></td>
+				</tr>
+			</table>
+			<?php submit_button( esc_html__( '保存头条配置', 'xibufz' ) ); ?>
+			</form>
+			<?php xibufz_admin_form_open( 'reset_headline' ); ?>
+				<?php submit_button( esc_html__( '恢复默认头条规则', 'xibufz' ), 'secondary', 'submit', false, array( 'data-xibufz-confirm' => esc_attr__( '确定恢复默认头条规则吗？', 'xibufz' ) ) ); ?>
 			</form>
 		</div>
 	</div>

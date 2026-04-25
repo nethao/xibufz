@@ -294,6 +294,203 @@ if ( ! function_exists( 'xibufz_category_url_by_id' ) ) {
 	}
 }
 
+if ( ! function_exists( 'xibufz_default_home_headline' ) ) {
+	/**
+	 * Default headline configuration.
+	 *
+	 * @return array
+	 */
+	function xibufz_default_home_headline() {
+		return array(
+			'show'            => 1,
+			'badge'           => __( '今日头条', 'xibufz' ),
+			'source'          => 'sticky',
+			'category_id'     => 0,
+			'post_id'         => 0,
+			'fallback'        => 'latest',
+			'show_excerpt'    => 1,
+			'excerpt_length'  => 58,
+			'secondary_show'  => 1,
+			'secondary_source' => 'latest',
+			'secondary_category_id' => 0,
+			'secondary_count' => 3,
+		);
+	}
+}
+
+if ( ! function_exists( 'xibufz_sanitize_home_headline' ) ) {
+	/**
+	 * Sanitize headline configuration.
+	 *
+	 * @param array $raw_config Raw config.
+	 * @return array
+	 */
+	function xibufz_sanitize_home_headline( $raw_config ) {
+		$defaults = xibufz_default_home_headline();
+
+		if ( ! is_array( $raw_config ) ) {
+			return $defaults;
+		}
+
+		$sources = array( 'sticky', 'latest', 'category', 'manual' );
+
+		$config = array(
+			'show'            => ! empty( $raw_config['show'] ) ? 1 : 0,
+			'badge'           => isset( $raw_config['badge'] ) ? sanitize_text_field( $raw_config['badge'] ) : $defaults['badge'],
+			'source'          => isset( $raw_config['source'] ) ? sanitize_key( $raw_config['source'] ) : $defaults['source'],
+			'category_id'     => isset( $raw_config['category_id'] ) ? absint( $raw_config['category_id'] ) : 0,
+			'post_id'         => isset( $raw_config['post_id'] ) ? absint( $raw_config['post_id'] ) : 0,
+			'fallback'        => isset( $raw_config['fallback'] ) ? sanitize_key( $raw_config['fallback'] ) : $defaults['fallback'],
+			'show_excerpt'    => ! empty( $raw_config['show_excerpt'] ) ? 1 : 0,
+			'excerpt_length'  => isset( $raw_config['excerpt_length'] ) ? absint( $raw_config['excerpt_length'] ) : $defaults['excerpt_length'],
+			'secondary_show'  => ! empty( $raw_config['secondary_show'] ) ? 1 : 0,
+			'secondary_source' => isset( $raw_config['secondary_source'] ) ? sanitize_key( $raw_config['secondary_source'] ) : $defaults['secondary_source'],
+			'secondary_category_id' => isset( $raw_config['secondary_category_id'] ) ? absint( $raw_config['secondary_category_id'] ) : 0,
+			'secondary_count' => isset( $raw_config['secondary_count'] ) ? absint( $raw_config['secondary_count'] ) : $defaults['secondary_count'],
+		);
+
+		if ( ! in_array( $config['source'], $sources, true ) ) {
+			$config['source'] = $defaults['source'];
+		}
+
+		if ( ! in_array( $config['secondary_source'], array( 'latest', 'category' ), true ) ) {
+			$config['secondary_source'] = $defaults['secondary_source'];
+		}
+
+		if ( ! in_array( $config['fallback'], array( 'latest', 'empty' ), true ) ) {
+			$config['fallback'] = $defaults['fallback'];
+		}
+
+		if ( 10 > $config['excerpt_length'] ) {
+			$config['excerpt_length'] = 10;
+		}
+		if ( 120 < $config['excerpt_length'] ) {
+			$config['excerpt_length'] = 120;
+		}
+		if ( 1 > $config['secondary_count'] ) {
+			$config['secondary_count'] = 3;
+		}
+		if ( 8 < $config['secondary_count'] ) {
+			$config['secondary_count'] = 8;
+		}
+
+		return $config;
+	}
+}
+
+if ( ! function_exists( 'xibufz_get_home_headline_config' ) ) {
+	/**
+	 * Get headline configuration.
+	 *
+	 * @return array
+	 */
+	function xibufz_get_home_headline_config() {
+		return xibufz_sanitize_home_headline( get_theme_mod( 'xibufz_home_headline', xibufz_default_home_headline() ) );
+	}
+}
+
+if ( ! function_exists( 'xibufz_get_home_headline_post' ) ) {
+	/**
+	 * Get the configured headline post.
+	 *
+	 * @param array $config Headline config.
+	 * @return WP_Post|null
+	 */
+	function xibufz_get_home_headline_post( $config ) {
+		$post = null;
+
+		if ( 'manual' === $config['source'] && ! empty( $config['post_id'] ) ) {
+			$manual = get_post( absint( $config['post_id'] ) );
+			if ( $manual && 'publish' === $manual->post_status ) {
+				return $manual;
+			}
+			if ( 'latest' !== $config['fallback'] ) {
+				return null;
+			}
+			$config['source'] = 'latest';
+		} elseif ( 'manual' === $config['source'] ) {
+			if ( 'latest' !== $config['fallback'] ) {
+				return null;
+			}
+			$config['source'] = 'latest';
+		}
+
+		$query_args = array(
+			'posts_per_page'      => 1,
+			'post_status'         => 'publish',
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		);
+
+		if ( 'sticky' === $config['source'] ) {
+			$sticky_ids = get_option( 'sticky_posts', array() );
+			if ( ! empty( $sticky_ids ) ) {
+				$query_args['post__in'] = array_map( 'absint', $sticky_ids );
+			} elseif ( 'latest' === $config['fallback'] ) {
+				$config['source'] = 'latest';
+			} else {
+				return null;
+			}
+		}
+
+		if ( 'category' === $config['source'] ) {
+			if ( ! empty( $config['category_id'] ) ) {
+				$query_args['cat'] = absint( $config['category_id'] );
+			} elseif ( 'latest' !== $config['fallback'] ) {
+				return null;
+			}
+		}
+
+		$query = new WP_Query( $query_args );
+		if ( $query->have_posts() ) {
+			$query->the_post();
+			$post = get_post();
+		}
+		wp_reset_postdata();
+
+		if ( ! $post && 'latest' === $config['fallback'] && 'latest' !== $config['source'] ) {
+			$query = new WP_Query( array(
+				'posts_per_page'      => 1,
+				'post_status'         => 'publish',
+				'ignore_sticky_posts' => true,
+				'no_found_rows'       => true,
+			) );
+			if ( $query->have_posts() ) {
+				$query->the_post();
+				$post = get_post();
+			}
+			wp_reset_postdata();
+		}
+
+		return $post;
+	}
+}
+
+if ( ! function_exists( 'xibufz_get_home_secondary_headlines_query' ) ) {
+	/**
+	 * Get secondary headline query.
+	 *
+	 * @param array $config Headline config.
+	 * @param int   $exclude_id Excluded post ID.
+	 * @return WP_Query
+	 */
+	function xibufz_get_home_secondary_headlines_query( $config, $exclude_id = 0 ) {
+		$args = array(
+			'posts_per_page'      => max( 1, absint( $config['secondary_count'] ) ),
+			'post_status'         => 'publish',
+			'post__not_in'        => $exclude_id ? array( absint( $exclude_id ) ) : array(),
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		);
+
+		if ( 'category' === $config['secondary_source'] && ! empty( $config['secondary_category_id'] ) ) {
+			$args['cat'] = absint( $config['secondary_category_id'] );
+		}
+
+		return new WP_Query( $args );
+	}
+}
+
 if ( ! function_exists( 'xibufz_default_home_sidebar_panels' ) ) {
 	/**
 	 * Default homepage sidebar panel configuration.

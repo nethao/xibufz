@@ -5,45 +5,17 @@
  * @package xibufz
  */
 
-$sticky_ids = get_option( 'sticky_posts', array() );
-$headline   = null;
-
-if ( ! empty( $sticky_ids ) ) {
-	$sticky_query = new WP_Query( array(
-		'post__in'            => array_map( 'absint', $sticky_ids ),
-		'posts_per_page'      => 1,
-		'post_status'         => 'publish',
-		'ignore_sticky_posts' => true,
-		'no_found_rows'       => true,
-	) );
-	if ( $sticky_query->have_posts() ) {
-		$sticky_query->the_post();
-		$headline = get_post();
-	}
-	wp_reset_postdata();
-}
-
-if ( ! $headline ) {
-	$latest_headline = new WP_Query( array(
-		'posts_per_page'      => 1,
-		'post_status'         => 'publish',
-		'ignore_sticky_posts' => true,
-		'no_found_rows'       => true,
-	) );
-	if ( $latest_headline->have_posts() ) {
-		$latest_headline->the_post();
-		$headline = get_post();
-	}
-	wp_reset_postdata();
-}
-
-$secondary_query = new WP_Query( array(
-	'posts_per_page'      => 3,
-	'post_status'         => 'publish',
-	'post__not_in'        => $headline ? array( (int) $headline->ID ) : array(),
-	'ignore_sticky_posts' => true,
-	'no_found_rows'       => true,
-) );
+$headline_config = function_exists( 'xibufz_get_home_headline_config' ) ? xibufz_get_home_headline_config() : array(
+	'show'           => 1,
+	'badge'          => esc_html__( '今日头条', 'xibufz' ),
+	'show_excerpt'   => 1,
+	'excerpt_length' => 58,
+	'secondary_show' => 1,
+);
+$headline        = ! empty( $headline_config['show'] ) && function_exists( 'xibufz_get_home_headline_post' ) ? xibufz_get_home_headline_post( $headline_config ) : null;
+$secondary_query = ! empty( $headline_config['secondary_show'] ) && function_exists( 'xibufz_get_home_secondary_headlines_query' ) ? xibufz_get_home_secondary_headlines_query( $headline_config, $headline ? (int) $headline->ID : 0 ) : null;
+$headline_badge  = ! empty( $headline_config['badge'] ) ? $headline_config['badge'] : esc_html__( '今日头条', 'xibufz' );
+$excerpt_length  = ! empty( $headline_config['excerpt_length'] ) ? absint( $headline_config['excerpt_length'] ) : 58;
 
 $banner_image_mod = xibufz_mod( 'xibufz_banner_image', '' );
 $banner_image     = '';
@@ -66,29 +38,37 @@ $hero_panels = function_exists( 'xibufz_get_home_sidebar_panels' ) ? xibufz_get_
 
 <section class="hero-grid">
 	<div>
-		<article class="card headline-card">
-			<div class="badge"><?php echo esc_html__( '今日头条', 'xibufz' ); ?></div>
-			<?php if ( $headline ) : ?>
-				<h2 class="headline-title"><a href="<?php echo esc_url( get_permalink( $headline ) ); ?>"><?php echo esc_html( get_the_title( $headline ) ); ?></a></h2>
-				<p class="headline-desc"><?php echo esc_html( wp_trim_words( get_the_excerpt( $headline ), 58, '...' ) ); ?></p>
-			<?php else : ?>
-				<h2 class="headline-title"><?php echo esc_html__( '聚焦法治建设新任务，推动权威资讯传播与公共法律服务协同升级', 'xibufz' ); ?></h2>
-				<p class="headline-desc"><?php echo esc_html__( '围绕法治新闻、公告公示、专题报道与服务入口进行首页重构，让用户快速识别重点、直达服务。', 'xibufz' ); ?></p>
-			<?php endif; ?>
-			<ul class="headline-list">
-				<?php if ( $secondary_query->have_posts() ) : ?>
-					<?php while ( $secondary_query->have_posts() ) : ?>
-						<?php $secondary_query->the_post(); ?>
-						<li><a href="<?php echo esc_url( get_permalink() ); ?>"><?php echo esc_html( get_the_title() ); ?></a></li>
-					<?php endwhile; ?>
+		<?php if ( ! empty( $headline_config['show'] ) ) : ?>
+			<article class="card headline-card">
+				<div class="badge"><?php echo esc_html( $headline_badge ); ?></div>
+				<?php if ( $headline ) : ?>
+					<h2 class="headline-title"><a href="<?php echo esc_url( get_permalink( $headline ) ); ?>"><?php echo esc_html( get_the_title( $headline ) ); ?></a></h2>
+					<?php if ( ! empty( $headline_config['show_excerpt'] ) ) : ?>
+						<p class="headline-desc"><?php echo esc_html( wp_trim_words( get_the_excerpt( $headline ), $excerpt_length, '...' ) ); ?></p>
+					<?php endif; ?>
 				<?php else : ?>
-					<li><?php echo esc_html__( '完善重点新闻推荐机制，突出头条与热点内容的传播价值', 'xibufz' ); ?></li>
-					<li><?php echo esc_html__( '强化公告公示与法规栏目在首屏中的辨识度与权威感', 'xibufz' ); ?></li>
-					<li><?php echo esc_html__( '新增便民服务入口，形成资讯与服务并重的门户结构', 'xibufz' ); ?></li>
+					<h2 class="headline-title"><?php echo esc_html__( '聚焦法治建设新任务，推动权威资讯传播与公共法律服务协同升级', 'xibufz' ); ?></h2>
+					<?php if ( ! empty( $headline_config['show_excerpt'] ) ) : ?>
+						<p class="headline-desc"><?php echo esc_html__( '围绕法治新闻、公告公示、专题报道与服务入口进行首页重构，让用户快速识别重点、直达服务。', 'xibufz' ); ?></p>
+					<?php endif; ?>
 				<?php endif; ?>
-			</ul>
-			<?php wp_reset_postdata(); ?>
-		</article>
+				<?php if ( ! empty( $headline_config['secondary_show'] ) ) : ?>
+					<ul class="headline-list">
+						<?php if ( $secondary_query && $secondary_query->have_posts() ) : ?>
+							<?php while ( $secondary_query->have_posts() ) : ?>
+								<?php $secondary_query->the_post(); ?>
+								<li><a href="<?php echo esc_url( get_permalink() ); ?>"><?php echo esc_html( get_the_title() ); ?></a></li>
+							<?php endwhile; ?>
+						<?php else : ?>
+							<li><?php echo esc_html__( '完善重点新闻推荐机制，突出头条与热点内容的传播价值', 'xibufz' ); ?></li>
+							<li><?php echo esc_html__( '强化公告公示与法规栏目在首屏中的辨识度与权威感', 'xibufz' ); ?></li>
+							<li><?php echo esc_html__( '新增便民服务入口，形成资讯与服务并重的门户结构', 'xibufz' ); ?></li>
+						<?php endif; ?>
+					</ul>
+					<?php wp_reset_postdata(); ?>
+				<?php endif; ?>
+			</article>
+		<?php endif; ?>
 
 		<section class="card banner">
 			<a class="banner-main" href="<?php echo esc_url( $banner_url ); ?>">
