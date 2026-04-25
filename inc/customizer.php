@@ -30,6 +30,51 @@ function xibufz_sanitize_textarea( $value ) {
 }
 
 /**
+ * Sanitize category IDs from Customizer controls.
+ *
+ * @param mixed $value Submitted value.
+ * @return int
+ */
+function xibufz_sanitize_category_id( $value ) {
+	return absint( $value );
+}
+
+/**
+ * Sanitize a media value that may be an attachment ID or an image URL.
+ *
+ * @param mixed $value Submitted value.
+ * @return int|string
+ */
+function xibufz_sanitize_image_value( $value ) {
+	if ( is_numeric( $value ) ) {
+		return absint( $value );
+	}
+
+	return esc_url_raw( $value );
+}
+
+/**
+ * Get category choices for Customizer select controls.
+ *
+ * @return array
+ */
+function xibufz_customizer_category_choices() {
+	$choices = array(
+		0 => esc_html__( '不绑定分类', 'xibufz' ),
+	);
+
+	$categories = get_categories( array(
+		'hide_empty' => false,
+	) );
+
+	foreach ( $categories as $category ) {
+		$choices[ $category->term_id ] = esc_html( $category->name );
+	}
+
+	return $choices;
+}
+
+/**
  * Register Customizer controls.
  *
  * @param WP_Customize_Manager $wp_customize Customizer object.
@@ -48,7 +93,7 @@ function xibufz_customize_register( $wp_customize ) {
 
 	$wp_customize->add_setting( 'xibufz_banner_image', array(
 		'default'           => '',
-		'sanitize_callback' => 'absint',
+		'sanitize_callback' => 'xibufz_sanitize_image_value',
 	) );
 	$wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'xibufz_banner_image', array(
 		'label'     => esc_html__( 'Banner 图片', 'xibufz' ),
@@ -88,6 +133,46 @@ function xibufz_customize_register( $wp_customize ) {
 			'label'   => $field['label'],
 			'section' => 'xibufz_banner',
 			'type'    => $field['type'],
+		) );
+	}
+
+	$wp_customize->add_section( 'xibufz_home_module_categories', array(
+		'title'       => esc_html__( '首页栏目分类绑定', 'xibufz' ),
+		'description' => esc_html__( '为首页“资讯专题”每个栏目模块选择对应的文章分类。保存后会同步更新首页栏目配置。', 'xibufz' ),
+		'panel'       => 'xibufz_theme_options',
+	) );
+
+	$module_category_choices = xibufz_customizer_category_choices();
+	$home_modules            = function_exists( 'xibufz_get_home_modules' ) ? xibufz_get_home_modules( true ) : array();
+
+	if ( empty( $home_modules ) && function_exists( 'xibufz_default_home_modules' ) ) {
+		$home_modules = xibufz_default_home_modules();
+	}
+
+	foreach ( $home_modules as $index => $module ) {
+		$module_number = $index + 1;
+		$setting       = "xibufz_home_module_{$module_number}_category_id";
+		$module_title  = isset( $module['title'] ) ? $module['title'] : sprintf(
+			/* translators: %d: module number. */
+			esc_html__( '栏目 %d', 'xibufz' ),
+			$module_number
+		);
+
+		$wp_customize->add_setting( $setting, array(
+			'default'           => isset( $module['category_id'] ) ? absint( $module['category_id'] ) : 0,
+			'sanitize_callback' => 'xibufz_sanitize_category_id',
+		) );
+
+		$wp_customize->add_control( $setting, array(
+			'label'       => sprintf(
+				/* translators: %s: module title. */
+				esc_html__( '%s 对应分类', 'xibufz' ),
+				esc_html( $module_title )
+			),
+			'description' => esc_html__( '该设置只修改栏目绑定分类，栏目标题、样式、数量和排序仍可在“西部法制管理”中维护。', 'xibufz' ),
+			'section'     => 'xibufz_home_module_categories',
+			'type'        => 'select',
+			'choices'     => $module_category_choices,
 		) );
 	}
 
@@ -188,3 +273,40 @@ function xibufz_customize_register( $wp_customize ) {
 	}
 }
 add_action( 'customize_register', 'xibufz_customize_register' );
+
+/**
+ * Sync Customizer category dropdowns back into the shared home modules theme_mod.
+ */
+function xibufz_sync_customizer_home_module_categories() {
+	if ( ! function_exists( 'xibufz_get_home_modules' ) || ! function_exists( 'xibufz_sanitize_home_modules' ) ) {
+		return;
+	}
+
+	$modules = xibufz_get_home_modules( true );
+	if ( empty( $modules ) ) {
+		return;
+	}
+
+	$changed = false;
+
+	foreach ( $modules as $index => $module ) {
+		$module_number = $index + 1;
+		$setting       = "xibufz_home_module_{$module_number}_category_id";
+		$category_id   = get_theme_mod( $setting, null );
+
+		if ( null === $category_id ) {
+			continue;
+		}
+
+		$category_id = absint( $category_id );
+		if ( ! isset( $modules[ $index ]['category_id'] ) || absint( $modules[ $index ]['category_id'] ) !== $category_id ) {
+			$modules[ $index ]['category_id'] = $category_id;
+			$changed = true;
+		}
+	}
+
+	if ( $changed ) {
+		set_theme_mod( 'xibufz_home_modules', xibufz_sanitize_home_modules( $modules ) );
+	}
+}
+add_action( 'customize_save_after', 'xibufz_sync_customizer_home_module_categories' );
