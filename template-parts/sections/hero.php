@@ -61,9 +61,7 @@ $banner_query    = new WP_Query( array(
 	'ignore_sticky_posts' => true,
 	'no_found_rows'       => true,
 ) );
-$popular_query = xibufz_query_by_category( 'featured', 5 );
-$notice_query  = xibufz_query_by_category( '公告公示', 4 );
-$topic_query   = xibufz_query_by_category( '专题专栏', 3 );
+$hero_panels = function_exists( 'xibufz_get_home_sidebar_panels' ) ? xibufz_get_home_sidebar_panels( 'hero' ) : array();
 ?>
 
 <section class="hero-grid">
@@ -128,65 +126,8 @@ $topic_query   = xibufz_query_by_category( '专题专栏', 3 );
 	</div>
 
 	<aside class="side-stack">
-		<section class="card panel">
-			<div class="panel-header">
-				<h3 class="panel-title"><?php echo esc_html__( '热门文章', 'xibufz' ); ?></h3>
-				<a class="panel-more" href="<?php echo esc_url( xibufz_category_url( 'featured' ) ); ?>"><?php echo esc_html__( '更多 >', 'xibufz' ); ?></a>
-			</div>
-			<ol class="rank-list">
-				<?php if ( $popular_query->have_posts() ) : ?>
-					<?php $rank = 1; ?>
-					<?php while ( $popular_query->have_posts() ) : ?>
-						<?php $popular_query->the_post(); ?>
-						<li>
-							<a class="rank-link" href="<?php echo esc_url( get_permalink() ); ?>">
-								<span class="rank-num"><?php echo esc_html( $rank ); ?></span>
-								<span><span class="item-title"><?php echo esc_html( get_the_title() ); ?></span><span class="item-meta"><?php echo esc_html( xibufz_post_date() ); ?></span></span>
-							</a>
-						</li>
-						<?php $rank++; ?>
-					<?php endwhile; ?>
-				<?php else : ?>
-					<?php xibufz_empty_state(); ?>
-				<?php endif; ?>
-			</ol>
-			<?php wp_reset_postdata(); ?>
-		</section>
-
-		<section class="card panel notice-panel">
-			<div class="panel-header">
-				<h3 class="panel-title"><?php echo esc_html__( '公告信息', 'xibufz' ); ?></h3>
-				<a class="panel-more" href="<?php echo esc_url( xibufz_category_url( '公告公示' ) ); ?>"><?php echo esc_html__( '更多 >', 'xibufz' ); ?></a>
-			</div>
-			<ul class="notice-list">
-				<?php if ( $notice_query->have_posts() ) : ?>
-					<?php while ( $notice_query->have_posts() ) : ?>
-						<?php $notice_query->the_post(); ?>
-						<li><a class="notice-link" href="<?php echo esc_url( get_permalink() ); ?>"><span class="item-title"><?php echo esc_html( get_the_title() ); ?></span></a></li>
-					<?php endwhile; ?>
-				<?php else : ?>
-					<?php xibufz_empty_state(); ?>
-				<?php endif; ?>
-			</ul>
-			<?php wp_reset_postdata(); ?>
-		</section>
-
-		<section class="card panel">
-			<div class="panel-header">
-				<h3 class="panel-title"><?php echo esc_html__( '专题推荐', 'xibufz' ); ?></h3>
-				<a class="panel-more" href="<?php echo esc_url( xibufz_category_url( '专题专栏' ) ); ?>"><?php echo esc_html__( '更多 >', 'xibufz' ); ?></a>
-			</div>
-			<ul class="news-list">
-				<?php if ( $topic_query->have_posts() ) : ?>
-					<?php while ( $topic_query->have_posts() ) : ?>
-						<?php $topic_query->the_post(); ?>
-						<li><a class="news-link" href="<?php echo esc_url( get_permalink() ); ?>"><span><span class="item-title"><?php echo esc_html( get_the_title() ); ?></span><span class="item-meta"><?php echo esc_html( xibufz_post_date() ); ?></span></span></a></li>
-					<?php endwhile; ?>
-				<?php else : ?>
-					<?php xibufz_empty_state(); ?>
-				<?php endif; ?>
-			</ul>
-			<?php wp_reset_postdata(); ?>
-		</section>
+		<?php foreach ( $hero_panels as $panel ) : ?>
+			<?php xibufz_render_home_sidebar_panel( $panel ); ?>
+		<?php endforeach; ?>
 	</aside>
 </section>

@@ -267,6 +267,79 @@ main { padding: 28px 0 48px; }
 .item-title { display: block; font-size: 14px; line-height: 1.7; margin-bottom: 6px; color: var(--text); }
 .item-meta { display: block; color: var(--text-3); font-size: 12px; }
 .empty-state { color: var(--text-3); font-size: 14px; line-height: 1.8; margin: 16px 0; }
+.taxonomy-list,
+.archive-panel-list {
+	list-style: none;
+	margin: 0;
+	padding: 4px 0 10px;
+	display: grid;
+	gap: 10px;
+}
+.taxonomy-link,
+.archive-panel-list li a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 42px;
+	padding: 10px 12px;
+	border: 1px solid rgba(229, 230, 235, 0.95);
+	border-radius: 9px;
+	background: linear-gradient(180deg, #fff 0%, #f9fbfe 100%);
+	color: var(--text-2);
+	font-size: 14px;
+	line-height: 1.45;
+	transition: 0.2s ease;
+}
+.taxonomy-link:hover,
+.archive-panel-list li a:hover {
+	border-color: rgba(22, 58, 112, 0.18);
+	box-shadow: 0 6px 14px rgba(22, 58, 112, 0.06);
+	color: var(--blue);
+	transform: translateY(-1px);
+}
+.taxonomy-name,
+.archive-panel-list li a {
+	min-width: 0;
+}
+.taxonomy-count,
+.archive-panel-list li a::after {
+	flex: 0 0 auto;
+	min-width: 28px;
+	height: 24px;
+	padding: 0 8px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(22, 58, 112, 0.08);
+	color: var(--blue);
+	font-size: 12px;
+	font-weight: 700;
+}
+.archive-panel-list li {
+	position: relative;
+}
+.archive-panel-list li a {
+	justify-content: flex-start;
+	padding-left: 38px;
+}
+.archive-panel-list li a::before {
+	content: "";
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	background: var(--red);
+	box-shadow: 0 0 0 4px rgba(181, 30, 35, 0.1);
+	transform: translateY(-50%);
+}
+.archive-panel-list li a::after {
+	content: "›";
+	margin-left: auto;
+}
 
 .section { margin-top: 28px; }
 .section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px; }

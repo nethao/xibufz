@@ -210,3 +210,160 @@ function xibufz_menu_fallback( $class = 'nav-list' ) {
 function xibufz_empty_state() {
 	echo '<p class="empty-state">' . esc_html__( '暂无内容，请稍后查看。', 'xibufz' ) . '</p>';
 }
+
+/**
+ * Render a homepage sidebar panel.
+ *
+ * @param array $panel Panel config.
+ */
+function xibufz_render_home_sidebar_panel( $panel ) {
+	$panel_style = isset( $panel['panel_style'] ) && 'notice' === $panel['panel_style'] ? ' notice-panel' : '';
+	$title       = isset( $panel['title'] ) ? $panel['title'] : '';
+	$more_url    = function_exists( 'xibufz_sidebar_panel_more_url' ) ? xibufz_sidebar_panel_more_url( $panel ) : home_url( '/' );
+	?>
+	<section class="card panel<?php echo esc_attr( $panel_style ); ?>">
+		<div class="panel-header">
+			<h3 class="panel-title"><?php echo esc_html( $title ); ?></h3>
+			<a class="panel-more" href="<?php echo esc_url( $more_url ); ?>"><?php echo esc_html__( '更多 >', 'xibufz' ); ?></a>
+		</div>
+		<?php
+		switch ( $panel['source'] ) {
+			case 'categories':
+				xibufz_render_home_categories_panel( $panel );
+				break;
+			case 'archives':
+				xibufz_render_home_archives_panel( $panel );
+				break;
+			default:
+				xibufz_render_home_posts_panel( $panel );
+				break;
+		}
+		?>
+	</section>
+	<?php
+}
+
+/**
+ * Render a post-based sidebar panel.
+ *
+ * @param array $panel Panel config.
+ */
+function xibufz_render_home_posts_panel( $panel ) {
+	$count = isset( $panel['count'] ) ? absint( $panel['count'] ) : 5;
+	$args  = array(
+		'posts_per_page'      => max( 1, $count ),
+		'post_status'         => 'publish',
+		'ignore_sticky_posts' => true,
+		'no_found_rows'       => true,
+	);
+
+	if ( 'category' === $panel['source'] && ! empty( $panel['category_id'] ) ) {
+		$args['cat'] = absint( $panel['category_id'] );
+	}
+
+	$query = new WP_Query( $args );
+
+	if ( ! $query->have_posts() && 'latest' === $panel['fallback'] && ! empty( $args['cat'] ) ) {
+		wp_reset_postdata();
+		unset( $args['cat'] );
+		$query = new WP_Query( $args );
+	}
+
+	$display_style = isset( $panel['display_style'] ) ? $panel['display_style'] : 'news';
+	$list_class    = 'news-list';
+	$link_class    = 'news-link';
+	$is_rank       = false;
+
+	if ( 'rank' === $display_style ) {
+		$list_class = 'rank-list';
+		$link_class = 'rank-link';
+		$is_rank    = true;
+	} elseif ( 'notice' === $display_style ) {
+		$list_class = 'notice-list';
+		$link_class = 'notice-link';
+	}
+	if ( $is_rank ) {
+		echo '<ol class="' . esc_attr( $list_class ) . '">';
+	} else {
+		echo '<ul class="' . esc_attr( $list_class ) . '">';
+	}
+	?>
+		<?php if ( $query->have_posts() ) : ?>
+			<?php $rank = 1; ?>
+			<?php while ( $query->have_posts() ) : ?>
+				<?php $query->the_post(); ?>
+				<li>
+					<a class="<?php echo esc_attr( $link_class ); ?>" href="<?php echo esc_url( get_permalink() ); ?>">
+						<?php if ( $is_rank ) : ?>
+							<span class="rank-num"><?php echo esc_html( $rank ); ?></span>
+						<?php endif; ?>
+						<span>
+							<span class="item-title"><?php echo esc_html( get_the_title() ); ?></span>
+							<?php if ( 'notice' !== $display_style ) : ?>
+								<span class="item-meta"><?php echo esc_html( xibufz_post_date() ); ?></span>
+							<?php endif; ?>
+						</span>
+					</a>
+				</li>
+				<?php $rank++; ?>
+			<?php endwhile; ?>
+		<?php else : ?>
+			<?php xibufz_empty_state(); ?>
+		<?php endif; ?>
+	<?php
+	echo $is_rank ? '</ol>' : '</ul>';
+	wp_reset_postdata();
+}
+
+/**
+ * Render category links panel.
+ *
+ * @param array $panel Panel config.
+ */
+function xibufz_render_home_categories_panel( $panel ) {
+	$categories = get_categories( array(
+		'hide_empty' => false,
+		'number'     => isset( $panel['count'] ) ? absint( $panel['count'] ) : 8,
+		'orderby'    => 'count',
+		'order'      => 'DESC',
+	) );
+	?>
+	<ul class="taxonomy-list category-panel-list">
+		<?php if ( ! empty( $categories ) ) : ?>
+			<?php foreach ( $categories as $category ) : ?>
+				<li>
+					<a class="taxonomy-link" href="<?php echo esc_url( get_category_link( $category ) ); ?>">
+						<span class="taxonomy-name"><?php echo esc_html( $category->name ); ?></span>
+						<span class="taxonomy-count"><?php echo esc_html( $category->count ); ?></span>
+					</a>
+				</li>
+			<?php endforeach; ?>
+		<?php else : ?>
+			<?php xibufz_empty_state(); ?>
+		<?php endif; ?>
+	</ul>
+	<?php
+}
+
+/**
+ * Render archives panel.
+ *
+ * @param array $panel Panel config.
+ */
+function xibufz_render_home_archives_panel( $panel ) {
+	$archive_links = wp_get_archives( array(
+		'type'            => 'monthly',
+		'limit'           => isset( $panel['count'] ) ? absint( $panel['count'] ) : 8,
+		'echo'            => 0,
+		'show_post_count' => true,
+	) );
+	?>
+	<ul class="archive-panel-list">
+		<?php if ( $archive_links ) : ?>
+			<?php echo wp_kses_post( $archive_links ); ?>
+		<?php else : ?>
+			<?php xibufz_empty_state(); ?>
+		<?php endif; ?>
+	</ul>
+	<?php
+}

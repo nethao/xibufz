@@ -137,6 +137,10 @@
 	.module-thumb { height: 72px; border-radius: 8px; }
 	.module-feature h4 { font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
 	.module-links { gap: 8px; }
+	.taxonomy-list,
+	.archive-panel-list { gap: 8px; padding-bottom: 8px; }
+	.taxonomy-link,
+	.archive-panel-list li a { min-height: 40px; padding-top: 9px; padding-bottom: 9px; font-size: 13px; }
 	.partner-card { padding-top: 16px; padding-bottom: 16px; }
 	.partner-links { gap: 12px; font-size: 13px; }
 	.partner-logos { gap: 10px; }

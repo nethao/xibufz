@@ -293,3 +293,233 @@ if ( ! function_exists( 'xibufz_category_url_by_id' ) ) {
 		return $url && ! is_wp_error( $url ) ? $url : home_url( '/' );
 	}
 }
+
+if ( ! function_exists( 'xibufz_default_home_sidebar_panels' ) ) {
+	/**
+	 * Default homepage sidebar panel configuration.
+	 *
+	 * @return array
+	 */
+	function xibufz_default_home_sidebar_panels() {
+		return array(
+			array(
+				'key'          => 'popular',
+				'area'         => 'hero',
+				'show'         => 1,
+				'title'        => __( '热门文章', 'xibufz' ),
+				'source'       => 'category',
+				'category_id'  => xibufz_category_id_by_name( 'featured' ),
+				'fallback'     => 'latest',
+				'count'        => 5,
+				'order'        => 10,
+				'panel_style'  => 'default',
+				'display_style' => 'rank',
+			),
+			array(
+				'key'          => 'notice',
+				'area'         => 'hero',
+				'show'         => 1,
+				'title'        => __( '公告信息', 'xibufz' ),
+				'source'       => 'category',
+				'category_id'  => xibufz_category_id_by_name( '公告公示' ),
+				'fallback'     => 'empty',
+				'count'        => 4,
+				'order'        => 20,
+				'panel_style'  => 'notice',
+				'display_style' => 'notice',
+			),
+			array(
+				'key'          => 'topics',
+				'area'         => 'hero',
+				'show'         => 1,
+				'title'        => __( '专题推荐', 'xibufz' ),
+				'source'       => 'category',
+				'category_id'  => xibufz_category_id_by_name( '专题专栏' ),
+				'fallback'     => 'empty',
+				'count'        => 3,
+				'order'        => 30,
+				'panel_style'  => 'default',
+				'display_style' => 'news',
+			),
+			array(
+				'key'          => 'site_notice',
+				'area'         => 'lower',
+				'show'         => 1,
+				'title'        => __( '站务公告', 'xibufz' ),
+				'source'       => 'category',
+				'category_id'  => xibufz_category_id_by_name( '公告公示' ),
+				'fallback'     => 'empty',
+				'count'        => 3,
+				'order'        => 40,
+				'panel_style'  => 'notice',
+				'display_style' => 'notice',
+			),
+			array(
+				'key'          => 'categories',
+				'area'         => 'lower',
+				'show'         => 1,
+				'title'        => __( '分类', 'xibufz' ),
+				'source'       => 'categories',
+				'category_id'  => 0,
+				'fallback'     => 'empty',
+				'count'        => 8,
+				'order'        => 50,
+				'panel_style'  => 'default',
+				'display_style' => 'categories',
+			),
+			array(
+				'key'          => 'archives',
+				'area'         => 'lower',
+				'show'         => 1,
+				'title'        => __( '归档', 'xibufz' ),
+				'source'       => 'archives',
+				'category_id'  => 0,
+				'fallback'     => 'empty',
+				'count'        => 8,
+				'order'        => 60,
+				'panel_style'  => 'default',
+				'display_style' => 'archives',
+			),
+		);
+	}
+}
+
+if ( ! function_exists( 'xibufz_sanitize_home_sidebar_panels' ) ) {
+	/**
+	 * Sanitize homepage sidebar panel rows.
+	 *
+	 * @param array $raw_panels Raw panel rows.
+	 * @return array
+	 */
+	function xibufz_sanitize_home_sidebar_panels( $raw_panels ) {
+		$panels = array();
+
+		if ( ! is_array( $raw_panels ) ) {
+			return $panels;
+		}
+
+		$allowed_areas         = array( 'hero', 'lower' );
+		$allowed_sources       = array( 'category', 'latest', 'categories', 'archives' );
+		$allowed_fallbacks     = array( 'empty', 'latest' );
+		$allowed_panel_styles  = array( 'default', 'notice' );
+		$allowed_display_styles = array( 'rank', 'notice', 'news', 'categories', 'archives' );
+
+		foreach ( $raw_panels as $raw_panel ) {
+			if ( ! is_array( $raw_panel ) ) {
+				continue;
+			}
+
+			$key = isset( $raw_panel['key'] ) ? sanitize_key( $raw_panel['key'] ) : '';
+			if ( '' === $key ) {
+				continue;
+			}
+
+			$area = isset( $raw_panel['area'] ) ? sanitize_key( $raw_panel['area'] ) : 'hero';
+			if ( ! in_array( $area, $allowed_areas, true ) ) {
+				$area = 'hero';
+			}
+
+			$source = isset( $raw_panel['source'] ) ? sanitize_key( $raw_panel['source'] ) : 'category';
+			if ( ! in_array( $source, $allowed_sources, true ) ) {
+				$source = 'category';
+			}
+
+			$fallback = isset( $raw_panel['fallback'] ) ? sanitize_key( $raw_panel['fallback'] ) : 'empty';
+			if ( ! in_array( $fallback, $allowed_fallbacks, true ) ) {
+				$fallback = 'empty';
+			}
+
+			$panel_style = isset( $raw_panel['panel_style'] ) ? sanitize_key( $raw_panel['panel_style'] ) : 'default';
+			if ( ! in_array( $panel_style, $allowed_panel_styles, true ) ) {
+				$panel_style = 'default';
+			}
+
+			$display_style = isset( $raw_panel['display_style'] ) ? sanitize_key( $raw_panel['display_style'] ) : 'news';
+			if ( ! in_array( $display_style, $allowed_display_styles, true ) ) {
+				$display_style = 'news';
+			}
+
+			$count = isset( $raw_panel['count'] ) ? absint( $raw_panel['count'] ) : 5;
+			if ( 1 > $count ) {
+				$count = 5;
+			}
+			if ( 20 < $count ) {
+				$count = 20;
+			}
+
+			$panels[] = array(
+				'key'           => $key,
+				'area'          => $area,
+				'show'          => ! empty( $raw_panel['show'] ) ? 1 : 0,
+				'title'         => isset( $raw_panel['title'] ) ? sanitize_text_field( $raw_panel['title'] ) : '',
+				'source'        => $source,
+				'category_id'   => isset( $raw_panel['category_id'] ) ? absint( $raw_panel['category_id'] ) : 0,
+				'fallback'      => $fallback,
+				'count'         => $count,
+				'order'         => isset( $raw_panel['order'] ) ? intval( $raw_panel['order'] ) : 0,
+				'panel_style'   => $panel_style,
+				'display_style' => $display_style,
+			);
+		}
+
+		usort( $panels, 'xibufz_sort_home_modules' );
+
+		return $panels;
+	}
+}
+
+if ( ! function_exists( 'xibufz_get_home_sidebar_panels' ) ) {
+	/**
+	 * Get configured homepage sidebar panels.
+	 *
+	 * @param string $area Sidebar area, hero or lower.
+	 * @param bool   $include_hidden Whether hidden panels should be included.
+	 * @return array
+	 */
+	function xibufz_get_home_sidebar_panels( $area = '', $include_hidden = false ) {
+		$panels = get_theme_mod( 'xibufz_home_sidebar_panels', array() );
+
+		if ( ! is_array( $panels ) || empty( $panels ) ) {
+			$panels = xibufz_default_home_sidebar_panels();
+		} else {
+			$panels = xibufz_sanitize_home_sidebar_panels( $panels );
+			if ( empty( $panels ) ) {
+				$panels = xibufz_default_home_sidebar_panels();
+			}
+		}
+
+		$filtered = array();
+		foreach ( $panels as $panel ) {
+			if ( '' !== $area && $panel['area'] !== $area ) {
+				continue;
+			}
+			if ( ! $include_hidden && empty( $panel['show'] ) ) {
+				continue;
+			}
+			$filtered[] = $panel;
+		}
+
+		return $filtered;
+	}
+}
+
+if ( ! function_exists( 'xibufz_sidebar_panel_more_url' ) ) {
+	/**
+	 * Get a sidebar panel more URL.
+	 *
+	 * @param array $panel Panel config.
+	 * @return string
+	 */
+	function xibufz_sidebar_panel_more_url( $panel ) {
+		if ( 'category' === $panel['source'] && ! empty( $panel['category_id'] ) ) {
+			return xibufz_category_url_by_id( $panel['category_id'] );
+		}
+
+		if ( 'categories' === $panel['source'] ) {
+			return home_url( '/' );
+		}
+
+		$posts_page_id = (int) get_option( 'page_for_posts' );
+		return $posts_page_id ? get_permalink( $posts_page_id ) : home_url( '/' );
+	}
+}

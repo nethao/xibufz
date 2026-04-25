@@ -59,6 +59,15 @@ function xibufz_admin_menu() {
 
 	add_submenu_page(
 		XIBUFZ_ADMIN_SLUG,
+		esc_html__( '首页右侧板块', 'xibufz' ),
+		esc_html__( '首页右侧板块', 'xibufz' ),
+		'edit_theme_options',
+		'xibufz-sidebar-panels',
+		'xibufz_admin_sidebar_panels_page'
+	);
+
+	add_submenu_page(
+		XIBUFZ_ADMIN_SLUG,
 		esc_html__( '便民服务', 'xibufz' ),
 		esc_html__( '便民服务', 'xibufz' ),
 		'edit_theme_options',
@@ -147,6 +156,10 @@ function xibufz_admin_maybe_save() {
 			xibufz_admin_save_home_modules();
 			xibufz_admin_redirect( 'xibufz-home-modules' );
 			break;
+		case 'save_sidebar_panels':
+			xibufz_admin_save_sidebar_panels();
+			xibufz_admin_redirect( 'xibufz-sidebar-panels' );
+			break;
 		case 'save_services':
 			xibufz_admin_save_services();
 			xibufz_admin_redirect( 'xibufz-services' );
@@ -174,6 +187,10 @@ function xibufz_admin_maybe_save() {
 		case 'reset_home_modules':
 			set_theme_mod( 'xibufz_home_modules', xibufz_default_home_modules() );
 			xibufz_admin_redirect( 'xibufz-home-modules' );
+			break;
+		case 'reset_sidebar_panels':
+			set_theme_mod( 'xibufz_home_sidebar_panels', xibufz_default_home_sidebar_panels() );
+			xibufz_admin_redirect( 'xibufz-sidebar-panels' );
 			break;
 		case 'init_all':
 			xibufz_admin_create_default_categories();
@@ -225,6 +242,15 @@ function xibufz_admin_save_home_modules() {
 	$raw_modules = isset( $_POST['xibufz_home_modules'] ) && is_array( $_POST['xibufz_home_modules'] ) ? wp_unslash( $_POST['xibufz_home_modules'] ) : array();
 	$modules     = xibufz_sanitize_home_modules( $raw_modules );
 	set_theme_mod( 'xibufz_home_modules', $modules );
+}
+
+/**
+ * Save sidebar panel settings.
+ */
+function xibufz_admin_save_sidebar_panels() {
+	$raw_panels = isset( $_POST['xibufz_home_sidebar_panels'] ) && is_array( $_POST['xibufz_home_sidebar_panels'] ) ? wp_unslash( $_POST['xibufz_home_sidebar_panels'] ) : array();
+	$panels     = xibufz_sanitize_home_sidebar_panels( $raw_panels );
+	set_theme_mod( 'xibufz_home_sidebar_panels', $panels );
 }
 
 /**
@@ -460,6 +486,10 @@ function xibufz_admin_write_default_theme_mods() {
 	if ( ! is_array( get_theme_mod( 'xibufz_home_modules', array() ) ) || empty( get_theme_mod( 'xibufz_home_modules', array() ) ) ) {
 		set_theme_mod( 'xibufz_home_modules', xibufz_default_home_modules() );
 	}
+
+	if ( ! is_array( get_theme_mod( 'xibufz_home_sidebar_panels', array() ) ) || empty( get_theme_mod( 'xibufz_home_sidebar_panels', array() ) ) ) {
+		set_theme_mod( 'xibufz_home_sidebar_panels', xibufz_default_home_sidebar_panels() );
+	}
 }
 
 /**
@@ -651,6 +681,137 @@ function xibufz_admin_home_modules_page() {
 			</form>
 			<?php xibufz_admin_form_open( 'reset_home_modules' ); ?>
 				<?php submit_button( esc_html__( '恢复默认 6 个栏目', 'xibufz' ), 'secondary', 'submit', false, array( 'data-xibufz-confirm' => esc_attr__( '确定恢复默认首页栏目吗？', 'xibufz' ) ) ); ?>
+			</form>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Render sidebar panels page.
+ */
+function xibufz_admin_sidebar_panels_page() {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		return;
+	}
+
+	$panels = function_exists( 'xibufz_get_home_sidebar_panels' ) ? xibufz_get_home_sidebar_panels( '', true ) : array();
+	$sources = array(
+		'category'   => esc_html__( '指定分类文章', 'xibufz' ),
+		'latest'     => esc_html__( '最新文章', 'xibufz' ),
+		'categories' => esc_html__( '分类目录', 'xibufz' ),
+		'archives'   => esc_html__( '文章归档', 'xibufz' ),
+	);
+	$fallbacks = array(
+		'empty'  => esc_html__( '无内容时显示空状态', 'xibufz' ),
+		'latest' => esc_html__( '分类无文章时回退最新文章', 'xibufz' ),
+	);
+	$panel_styles = array(
+		'default' => esc_html__( '默认白色', 'xibufz' ),
+		'notice'  => esc_html__( '公告浅黄色', 'xibufz' ),
+	);
+	$display_styles = array(
+		'rank'       => esc_html__( '排名列表', 'xibufz' ),
+		'notice'     => esc_html__( '公告列表', 'xibufz' ),
+		'news'       => esc_html__( '新闻列表', 'xibufz' ),
+		'categories' => esc_html__( '分类目录样式', 'xibufz' ),
+		'archives'   => esc_html__( '归档样式', 'xibufz' ),
+	);
+	$areas = array(
+		'hero'  => esc_html__( '首屏右侧', 'xibufz' ),
+		'lower' => esc_html__( '独家阅读右侧', 'xibufz' ),
+	);
+	?>
+	<div class="wrap xibufz-admin-wrap">
+		<h1><?php echo esc_html__( '首页右侧板块', 'xibufz' ); ?></h1>
+		<?php xibufz_admin_notice(); ?>
+		<div class="xibufz-admin-card">
+			<p><?php echo esc_html__( '管理首页右侧的热门文章、公告信息、专题推荐、站务公告、分类和归档板块。排序值越小越靠前。', 'xibufz' ); ?></p>
+			<?php xibufz_admin_form_open( 'save_sidebar_panels' ); ?>
+			<div class="xibufz-table-scroll">
+				<table class="widefat striped xibufz-admin-table">
+					<thead>
+						<tr>
+							<th><?php echo esc_html__( '显示', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '板块标题', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '位置', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '抓取规则', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '绑定分类', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '数量', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '回退规则', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '面板样式', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '列表样式', 'xibufz' ); ?></th>
+							<th><?php echo esc_html__( '排序', 'xibufz' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $panels as $index => $panel ) : ?>
+							<tr>
+								<td>
+									<input type="hidden" name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][key]" value="<?php echo esc_attr( $panel['key'] ); ?>">
+									<label><input type="checkbox" name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][show]" value="1" <?php checked( ! empty( $panel['show'] ) ); ?>> <?php echo esc_html__( '显示', 'xibufz' ); ?></label>
+								</td>
+								<td><input class="regular-text" type="text" name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][title]" value="<?php echo esc_attr( $panel['title'] ); ?>"></td>
+								<td>
+									<select name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][area]">
+										<?php foreach ( $areas as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $panel['area'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</td>
+								<td>
+									<select name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][source]">
+										<?php foreach ( $sources as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $panel['source'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</td>
+								<td>
+									<?php
+									wp_dropdown_categories(
+										array(
+											'name'              => 'xibufz_home_sidebar_panels[' . esc_attr( $index ) . '][category_id]',
+											'selected'          => absint( $panel['category_id'] ),
+											'show_option_none'  => esc_html__( '不绑定分类', 'xibufz' ),
+											'option_none_value' => 0,
+											'hide_empty'        => false,
+											'taxonomy'          => 'category',
+										)
+									);
+									?>
+								</td>
+								<td><input class="small-text" type="number" min="1" max="20" name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][count]" value="<?php echo esc_attr( $panel['count'] ); ?>"></td>
+								<td>
+									<select name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][fallback]">
+										<?php foreach ( $fallbacks as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $panel['fallback'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</td>
+								<td>
+									<select name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][panel_style]">
+										<?php foreach ( $panel_styles as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $panel['panel_style'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</td>
+								<td>
+									<select name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][display_style]">
+										<?php foreach ( $display_styles as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $panel['display_style'], $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</td>
+								<td><input class="small-text" type="number" name="xibufz_home_sidebar_panels[<?php echo esc_attr( $index ); ?>][order]" value="<?php echo esc_attr( $panel['order'] ); ?>"></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<?php submit_button( esc_html__( '保存右侧板块', 'xibufz' ) ); ?>
+			</form>
+			<?php xibufz_admin_form_open( 'reset_sidebar_panels' ); ?>
+				<?php submit_button( esc_html__( '恢复默认右侧板块', 'xibufz' ), 'secondary', 'submit', false, array( 'data-xibufz-confirm' => esc_attr__( '确定恢复默认右侧板块吗？', 'xibufz' ) ) ); ?>
 			</form>
 		</div>
 	</div>
