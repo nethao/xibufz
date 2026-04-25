@@ -1,0 +1,85 @@
+.xibufz-admin-wrap {
+  max-width: 1180px;
+}
+
+.xibufz-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.xibufz-admin-card {
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 6px 18px rgba(22, 58, 112, 0.06);
+  margin-top: 16px;
+}
+
+.xibufz-admin-card h2 {
+  margin-top: 0;
+}
+
+.xibufz-status-list {
+  margin: 0;
+}
+
+.xibufz-status-list li {
+  padding: 6px 0;
+}
+
+.xibufz-admin-table th,
+.xibufz-admin-table td {
+  vertical-align: middle;
+}
+
+.xibufz-admin-table input.regular-text,
+.xibufz-admin-table select {
+  max-width: 100%;
+}
+
+.xibufz-table-scroll {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.xibufz-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f0f6fc;
+  color: #135e96;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.xibufz-ok {
+  color: #008a20;
+  font-weight: 600;
+}
+
+.xibufz-missing {
+  color: #b32d2e;
+  font-weight: 600;
+}
+
+.xibufz-admin-card form + form {
+  margin-top: 12px;
+}
+
+.xibufz-links-table input.regular-text {
+  width: 100%;
+}
+
+@media (max-width: 782px) {
+  .xibufz-admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .xibufz-admin-card {
+    padding: 14px;
+  }
+}

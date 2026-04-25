@@ -26,7 +26,7 @@ function xibufz_sanitize_url( $value ) {
  * @return string
  */
 function xibufz_sanitize_textarea( $value ) {
-	return wp_kses_post( $value );
+	return sanitize_textarea_field( $value );
 }
 
 /**

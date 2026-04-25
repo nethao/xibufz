@@ -45,9 +45,16 @@ $secondary_query = new WP_Query( array(
 	'no_found_rows'       => true,
 ) );
 
-$banner_image_id = absint( xibufz_mod( 'xibufz_banner_image', 0 ) );
-$banner_image    = $banner_image_id ? wp_get_attachment_image_url( $banner_image_id, 'full' ) : '';
-$banner_url      = xibufz_mod( 'xibufz_banner_url', home_url( '/' ) );
+$banner_image_mod = xibufz_mod( 'xibufz_banner_image', '' );
+$banner_image     = '';
+
+if ( is_numeric( $banner_image_mod ) ) {
+	$banner_image = wp_get_attachment_image_url( absint( $banner_image_mod ), 'full' );
+} elseif ( $banner_image_mod ) {
+	$banner_image = esc_url_raw( $banner_image_mod );
+}
+
+$banner_url = xibufz_mod( 'xibufz_banner_url', home_url( '/' ) );
 $banner_query    = new WP_Query( array(
 	'posts_per_page'      => 3,
 	'post_status'         => 'publish',
