@@ -245,11 +245,19 @@ function xibufz_admin_redirect( $page ) {
  * Save banner fields.
  */
 function xibufz_admin_save_banner() {
+	$banner_source = isset( $_POST['xibufz_banner_source'] ) ? sanitize_key( wp_unslash( $_POST['xibufz_banner_source'] ) ) : 'custom';
+	if ( ! in_array( $banner_source, array( 'custom', 'category' ), true ) ) {
+		$banner_source = 'custom';
+	}
+
 	set_theme_mod( 'xibufz_banner_image', isset( $_POST['xibufz_banner_image'] ) ? esc_url_raw( wp_unslash( $_POST['xibufz_banner_image'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_kicker', isset( $_POST['xibufz_banner_kicker'] ) ? sanitize_text_field( wp_unslash( $_POST['xibufz_banner_kicker'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_title', isset( $_POST['xibufz_banner_title'] ) ? sanitize_text_field( wp_unslash( $_POST['xibufz_banner_title'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_subtitle', isset( $_POST['xibufz_banner_subtitle'] ) ? sanitize_textarea_field( wp_unslash( $_POST['xibufz_banner_subtitle'] ) ) : '' );
 	set_theme_mod( 'xibufz_banner_url', isset( $_POST['xibufz_banner_url'] ) ? esc_url_raw( wp_unslash( $_POST['xibufz_banner_url'] ) ) : '' );
+	set_theme_mod( 'xibufz_banner_source', $banner_source );
+	set_theme_mod( 'xibufz_banner_category_id', isset( $_POST['xibufz_banner_category_id'] ) ? absint( wp_unslash( $_POST['xibufz_banner_category_id'] ) ) : 0 );
+	set_theme_mod( 'xibufz_banner_post_count', isset( $_POST['xibufz_banner_post_count'] ) ? min( 8, max( 4, absint( wp_unslash( $_POST['xibufz_banner_post_count'] ) ) ) ) : 4 );
 }
 
 /**
@@ -475,6 +483,9 @@ function xibufz_admin_write_default_theme_mods() {
 		'xibufz_banner_title'        => '法治中国建设纵深推进，构建更清晰的资讯门户首页',
 		'xibufz_banner_subtitle'     => '这里用于展示重大新闻、专题报道和重点宣传内容。',
 		'xibufz_banner_url'          => home_url( '/' ),
+		'xibufz_banner_source'       => 'custom',
+		'xibufz_banner_category_id'  => 0,
+		'xibufz_banner_post_count'   => 4,
 		'xibufz_footer_desc'         => '西部法制网致力于打造权威、清晰、专业的法治资讯与服务门户。',
 		'xibufz_footer_record'       => '陕ICP备2025000000号',
 		'xibufz_footer_organizer'    => '西部法制网',
@@ -595,6 +606,8 @@ function xibufz_admin_banner_page() {
 	if ( ! current_user_can( 'edit_theme_options' ) ) {
 		return;
 	}
+
+	$banner_source = get_theme_mod( 'xibufz_banner_source', 'custom' );
 	?>
 	<div class="wrap xibufz-admin-wrap">
 		<h1><?php echo esc_html__( '首页 Banner', 'xibufz' ); ?></h1>
@@ -602,6 +615,41 @@ function xibufz_admin_banner_page() {
 		<div class="xibufz-admin-card">
 			<?php xibufz_admin_form_open( 'save_banner' ); ?>
 			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="xibufz_banner_source"><?php echo esc_html__( 'Banner 内容来源', 'xibufz' ); ?></label></th>
+					<td>
+						<select id="xibufz_banner_source" name="xibufz_banner_source">
+							<option value="custom" <?php selected( $banner_source, 'custom' ); ?>><?php echo esc_html__( '手动配置图文', 'xibufz' ); ?></option>
+							<option value="category" <?php selected( $banner_source, 'category' ); ?>><?php echo esc_html__( '调用指定分类文章', 'xibufz' ); ?></option>
+						</select>
+						<p class="description"><?php echo esc_html__( '选择指定分类后，第一篇文章作为大 Banner，后续文章作为下方焦点图。分类无文章时自动回退手动配置。', 'xibufz' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_banner_category_id"><?php echo esc_html__( '绑定文章分类', 'xibufz' ); ?></label></th>
+					<td>
+						<?php
+						wp_dropdown_categories(
+							array(
+								'id'                => 'xibufz_banner_category_id',
+								'name'              => 'xibufz_banner_category_id',
+								'selected'          => absint( get_theme_mod( 'xibufz_banner_category_id', 0 ) ),
+								'show_option_none'  => esc_html__( '不绑定分类', 'xibufz' ),
+								'option_none_value' => 0,
+								'hide_empty'        => false,
+								'taxonomy'          => 'category',
+							)
+						);
+						?>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="xibufz_banner_post_count"><?php echo esc_html__( '调用文章数量', 'xibufz' ); ?></label></th>
+					<td>
+						<input class="small-text" id="xibufz_banner_post_count" type="number" min="4" max="8" name="xibufz_banner_post_count" value="<?php echo esc_attr( get_theme_mod( 'xibufz_banner_post_count', 4 ) ); ?>">
+						<p class="description"><?php echo esc_html__( '建议至少 4 篇：1 篇大图，3 篇小焦点图。', 'xibufz' ); ?></p>
+					</td>
+				</tr>
 				<tr>
 					<th scope="row"><label for="xibufz_banner_image"><?php echo esc_html__( 'Banner 图片 URL', 'xibufz' ); ?></label></th>
 					<td>
